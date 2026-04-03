@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Based Accountant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,300..600;1,14..32,300..600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand-50: #ecfdf5; --brand-100: #d1fae5; --brand-200: #a7f3d0;
+      --brand-300: #6ee7b7; --brand-400: #34d399; --brand-500: #10b981;
+      --brand-600: #059669; --brand-700: #047857; --brand-800: #065f46;
+      --brand-900: #064e3b; --brand-950: #022c22;
+      --bg: #0a0a0a; --bg-surface: #141414; --bg-elevated: #1a1a1a;
+      --text: #f5f5f4; --text-muted: #a8a29e; --text-dim: #78716c;
+      --border: rgba(255,255,255,0.06);
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::selection { background: rgba(16, 185, 129, 0.25); }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(16,185,129,0.2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(16,185,129,0.4); }
+
+    /* ── Layout ─────────────────────────────────────── */
+
+    .container {
+      max-width: 740px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Hero (initial state) ───────────────────────── */
+
+    .hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      transition: min-height 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .hero.collapsed {
+      min-height: auto;
+      padding-top: 48px;
+    }
+
+    .hero h1 {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 3.5rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      opacity: 0;
+      transform: translateY(16px);
+      animation: fadeUp 0.6s ease forwards;
+    }
+
+    .hero .subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      font-weight: 300;
+      margin-bottom: 40px;
+      opacity: 0;
+      transform: translateY(12px);
+      animation: fadeUp 0.6s ease 0.1s forwards;
+    }
+
+    .hero.collapsed .subtitle { display: none; }
+
+    .hero.collapsed h1 {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+    }
+
+    /* ── Search Input ───────────────────────────────── */
+
+    .search-wrap {
+      width: 100%;
+      max-width: 600px;
+      position: relative;
+      opacity: 0;
+      transform: translateY(12px);
+      animation: fadeUp 0.6s ease 0.2s forwards;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 16px 20px 16px 48px;
+      font-family: inherit;
+      font-size: 1rem;
+      color: var(--text);
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-input::placeholder { color: var(--text-dim); }
+
+    .search-input:focus {
+      border-color: rgba(16, 185, 129, 0.4);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08), 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    .search-kbd {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 8px;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .search-input:focus ~ .search-kbd { opacity: 0; }
+
+    /* ── Loading ─────────────────────────────────────── */
+
+    .loading {
+      display: none;
+      padding: 40px 0;
+      text-align: center;
+    }
+
+    .loading.visible { display: block; }
+
+    .loading-dots {
+      display: inline-flex;
+      gap: 6px;
+    }
+
+    .loading-dots span {
+      width: 6px;
+      height: 6px;
+      background: var(--brand-500);
+      border-radius: 50%;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+
+    .loading-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+    /* ── AI Answer ──────────────────────────────────── */
+
+    .ai-answer {
+      display: none;
+      margin-top: 32px;
+      padding: 24px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+
+    .ai-answer.visible { display: block; }
+
+    .ai-answer .label {
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--brand-500);
+      margin-bottom: 12px;
+    }
+
+    .ai-answer .content {
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+
+    .ai-answer .no-key {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+
+    /* ── Results ─────────────────────────────────────── */
+
+    .results {
+      display: none;
+      margin-top: 24px;
+      padding-bottom: 120px;
+    }
+
+    .results.visible { display: block; }
+
+    .results-header {
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+    }
+
+    .result-card {
+      padding: 20px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .result-card:hover {
+      border-color: rgba(16, 185, 129, 0.2);
+      background: var(--bg-elevated);
+    }
+
+    .result-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .result-framework {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--brand-400);
+      background: rgba(16, 185, 129, 0.08);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .result-citation {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .result-score {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-left: auto;
+    }
+
+    .result-text {
+      font-size: 0.9rem;
+      line-height: 1.65;
+      color: var(--text-muted);
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+
+    .result-card.expanded .result-text {
+      -webkit-line-clamp: unset;
+      color: var(--text);
+    }
+
+    .result-page {
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    /* ── Footer ──────────────────────────────────────── */
+
+    .footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 16px 0;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      background: linear-gradient(transparent, var(--bg) 50%);
+      pointer-events: none;
+    }
+
+    .footer a {
+      color: var(--brand-500);
+      text-decoration: none;
+      pointer-events: auto;
+    }
+
+    /* ── Animations ──────────────────────────────────── */
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease forwards;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero" id="hero">
+      <h1>Based Accountant</h1>
+      <p class="subtitle">Search every Malaysian accounting standard instantly</p>
+      <div class="search-wrap">
+        <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+        </svg>
+        <input
+          class="search-input"
+          id="searchInput"
+          type="text"
+          placeholder="e.g. revenue recognition long-term contracts MPERS"
+          autofocus
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <span class="search-kbd" id="searchKbd">⌘K</span>
+      </div>
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="loading-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div class="ai-answer" id="aiAnswer">
+      <div class="label">AI Answer</div>
+      <div class="content" id="aiContent"></div>
+    </div>
+
+    <div class="results" id="results">
+      <div class="results-header" id="resultsHeader"></div>
+      <div id="resultsList"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    73,380 chunks from 308 MASB standards &middot;
+    <a href="https://github.com/hazlijohar/basedaccountant">GitHub</a>
+  </div>
+
+  <script>
+    const input = document.getElementById('searchInput');
+    const hero = document.getElementById('hero');
+    const loading = document.getElementById('loading');
+    const aiAnswer = document.getElementById('aiAnswer');
+    const aiContent = document.getElementById('aiContent');
+    const results = document.getElementById('results');
+    const resultsHeader = document.getElementById('resultsHeader');
+    const resultsList = document.getElementById('resultsList');
+    const searchKbd = document.getElementById('searchKbd');
+
+    let debounceTimer = null;
+    let currentQuery = '';
+
+    // ⌘K to focus search
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        input.focus();
+        input.select();
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && input.value.trim()) {
+        e.preventDefault();
+        runSearch(input.value.trim());
+      }
+    });
+
+    async function runSearch(query) {
+      if (query === currentQuery) return;
+      currentQuery = query;
+
+      // Collapse hero
+      hero.classList.add('collapsed');
+      loading.classList.add('visible');
+      aiAnswer.classList.remove('visible');
+      results.classList.remove('visible');
+      resultsList.innerHTML = '';
+      aiContent.textContent = '';
+
+      try {
+        // Run search + ask in parallel
+        const [searchRes, askRes] = await Promise.all([
+          fetch('/api/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, k: 10 }),
+          }).then(r => r.json()),
+
+          fetch('/api/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, k: 5 }),
+          }),
+        ]);
+
+        loading.classList.remove('visible');
+
+        // Render search results
+        if (searchRes.results && searchRes.results.length > 0) {
+          resultsHeader.textContent = `${searchRes.results.length} results from ${searchRes.total_docs.toLocaleString()} indexed chunks`;
+          renderResults(searchRes.results);
+          results.classList.add('visible');
+        }
+
+        // Handle AI answer
+        if (askRes.headers.get('content-type')?.includes('text/event-stream')) {
+          aiAnswer.classList.add('visible');
+          aiContent.textContent = '';
+          const reader = askRes.body.getReader();
+          const decoder = new TextDecoder();
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                aiContent.textContent += line.slice(6);
+              }
+            }
+          }
+        } else {
+          const askData = await askRes.json();
+          if (askData.error) {
+            aiAnswer.classList.add('visible');
+            aiContent.innerHTML = `<span class="no-key">Set ANTHROPIC_API_KEY to enable AI-synthesized answers with citations.</span>`;
+          }
+        }
+      } catch (err) {
+        loading.classList.remove('visible');
+        console.error(err);
+      }
+    }
+
+    function renderResults(items) {
+      resultsList.innerHTML = '';
+      items.forEach((item, i) => {
+        const card = document.createElement('div');
+        card.className = 'result-card fade-in';
+        card.style.animationDelay = `${i * 0.04}s`;
+        card.onclick = () => card.classList.toggle('expanded');
+
+        card.innerHTML = `
+          <div class="result-meta">
+            <span class="result-framework">${esc(item.framework)}</span>
+            <span class="result-citation">${esc(item.citation)}</span>
+            <span class="result-score">${item.score.toFixed(2)}</span>
+          </div>
+          <div class="result-text">${esc(item.text)}</div>
+          ${item.page ? `<div class="result-page">Page ${item.page}</div>` : ''}
+        `;
+        resultsList.appendChild(card);
+      });
+    }
+
+    function esc(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+  </script>
+</body>
+</html>
